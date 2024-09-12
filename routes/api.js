@@ -16,6 +16,7 @@ const threadSchema = new Schema({
   text: { type: String, required: true },
   created_on: { type: String, required: true },
   bumped_on: { type: String, required: true },
+  board_id: { type: Schema.Types.ObjectId, ref: 'Board', required: true },
   reported: Boolean,
   delete_password: String,
   replies: [{ type: Schema.Types.ObjectId, ref: 'Thread' }]
@@ -37,15 +38,33 @@ module.exports = function (app) {
     PUT request to /api/replies/{board} and pass along the thread_id & reply_id. Returned will be the string reported. The reported value of the reply_id will be changed to true.
   */
 
-//LOGICA BOARD
+  const createThread = (text, board_id, delete_password) => {
 
+    let now = moment();
+    let formattedDate = now.format('YYYY-MM-DD HH:mm:ss');
+
+    let thread = new THREAD({
+      text: text,
+      created_on: formattedDate,
+      bumped_on: formattedDate,
+      board_id: board_id,
+      reported: false,
+      delete_password: delete_password,
+      replies: []
+    });
+
+    // Devolvemos la promesa
+    return thread.save();
+  };
+  
   app.route('/api/threads/:board')
     .all(function (req, res, next) {
       const boardName = req.params.board;
-      console.log("boardName: ", boardName);
-      BOARD.findOneByName({ name: boardName})
-        .then((board) => {
-          const board = board;
+      BOARD.findOne({ name: boardName})
+        .then((boardFound) => {
+          if (req.method != 'POST' && !boardFound)
+            return res.json({error: "no board found"});
+          req.board = boardFound;
           next();
         })
         .catch((err) => {
@@ -54,41 +73,29 @@ module.exports = function (app) {
     })
     .post(function (req, res) {
 
-      console.log(board);
-      const board = req.params.board;
-      console.log(board);
+      const board = req.board;
+      const text = req.body.text || "";
+      const delete_password = req.body.delete_password || "";
+      let threadPromise = null;
 
-      const text = req.body.text;
-      let finalText = "";
-      const delete_password = req.body.delete_password;
-      let finalDeletePass = "";
+      if (board === null) {
+        let paramBoard = req.params.board;
+        let newBoard = new BOARD({ name: paramBoard});
+        threadPromise = newBoard.save()
+          .then((savedBoard) => {
+            return createThread(text, savedBoard._id, delete_password);
+          });
+      } else {
+        threadPromise = createThread(text, board._id, delete_password);
+      }
 
-      if (text !== undefined)
-        finalText = text;
-
-      if (delete_password !== undefined)
-        finalDeletePass = delete_password;
-
-      let now = new Date();
-      let formattedDate = now.format('YYYY-MM-DD HH:mm:ss');
-
-      let thread = new THREAD({
-        text: finalText,
-        created_on: formattedDate,
-        bumped_on: formattedDate,
-        reported: false,
-        delete_password: finalDeletePass,
-        replies: []
-      });
-
-      thread.save()
+      threadPromise
         .then((savedThread) => {
-          return res.json(savedThread);
+          res.json(savedThread);
         })
         .catch((err) => {
-          return res.json(err);
+          res.status.json(err);
         });
-
     })
     .get(function (req, res) {
       
@@ -135,51 +142,52 @@ module.exports = function (app) {
 
     
   app.route('/api/replies/:board')
+    .all(function (req, res, next) {
+      const boardName = req.params.board;
+      BOARD.findOne({ name: boardName})
+        .then((boardFound) => {
+          if (!boardFound)
+            return res.json({error: "no board found"});
+          req.board = boardFound;
+          next();
+        })
+        .catch((err) => {
+          return res.json(err);
+        });
+    })
     .post(function (req, res) {
-      const text = req.body.text;
-      let finalText = "";
-      const delete_password = req.body.delete_password;
-      let finalDeletePass = "";
-      const thread_id = req.body.thread_id;
-      let finalThreadId = "";
+      const board = req.board;
+      const text = req.body.text || "";
+      const delete_password = req.body.delete_password || "";
+      const thread_id = req.body.thread_id || "";
 
-      if (text !== undefined)
-        finalText = text;
+      let now = moment();
+      let formattedDate = now.format('YYYY-MM-DD HH:mm:ss');
 
-      if (delete_password !== undefined)
-        finalDeletePass = delete_password;
-
-      if (finalThreadId !== undefined)
-        finalThreadId = thread_id;
-
-      THREAD.findOneById(finalThreadId)
+      THREAD.findById(thread_id)
         .then((originalThread) => {
           if (!originalThread)
             return res.json({error: "invalid id"});
 
-          let now = new Date();
-          let formattedDate = now.format('YYYY-MM-DD HH:mm:ss');
-
-          let replyThread = new THREAD({
-            text: finalText,
-            created_on: formattedDate,
-            bumped_on: formattedDate,
-            reported: false,
-            delete_password: finalDeletePass,
-            replies: []
-          });
-
-          replyThread.save()
+          console.log("originalThread: ", originalThread);
+          createThread(text, board._id, delete_password)
             .then((savedThread) => {
 
+              console.log("savedThread: ", savedThread);
+
               originalThread.bumped_on = formattedDate;
-              originalThread.replies.push = savedThread._id;
+              originalThread.replies.push(savedThread._id);
+
+              console.log("originalThread: ", originalThread);
 
               originalThread.save()
                 .then((originalThread) => {
 
-                  THREAD.findOneById(originalThread._id).populate('replies')
+                  console.log("originalThread: ", originalThread);
+
+                  THREAD.findById(originalThread._id).populate('replies')
                     .then((originalThread) => {
+                      console.log("originalThread: ", originalThread);
                       return res.json(originalThread);
                     })
                     .catch((err) => {
