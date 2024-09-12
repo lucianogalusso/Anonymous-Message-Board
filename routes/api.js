@@ -99,14 +99,14 @@ module.exports = function (app) {
     })
     .get(function (req, res) {
       
-      THREAD.find({ board_id: req.board._id}).sort({created_on:-1}).limit(10).select({reported:0, delete_password:0}).populate('replies')
+      THREAD.find({ board_id: req.board._id}).sort({created_on:-1}).limit(10).select({reported:0, delete_password:0}).populate({path:'replies',select:{reported:0, delete_password:0}})
         .then((threads) => {
           if (!threads) 
             return res.json([]);
           threads.forEach(thread => {
             //ver campo reported y delete_password
             thread.replies.sort((a, b) => new Date(b.created_on) - new Date(a.created_on));
-            threads.replies = thread.replies.slice(0, 3);
+            thread.replies = thread.replies.slice(0, 3);
           });
           return res.json(threads);
         })
@@ -200,7 +200,7 @@ module.exports = function (app) {
     })
     .get(function (req, res) {
       const thread_id = req.query.thread_id;
-      THREAD.findById(thread_id).select({reported:0, delete_password:0}).populate('replies')
+      THREAD.findById(thread_id).select({reported:0, delete_password:0}).populate({path:'replies',select:{reported:0, delete_password:0}})
         .then((threads) => {
           if (!threads) 
             return res.json([]);
