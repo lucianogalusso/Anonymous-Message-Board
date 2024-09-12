@@ -149,15 +149,14 @@ module.exports = function (app) {
 
     })
     .put(function (req, res) {
-      const stocks = [].concat(req.query.stock);
-      let like = req.query.like;
-      const ip = req.ip;
-
-      if (like === undefined || like === 'false')
-        like = false;
-
-      if (stocks.length > 2)
-        return res.json({ error: 'More than 2 stocks not allowed' });
+      const thread_id = req.body.thread_id || "";
+      THREAD.findByIdAndUpdate(thread_id, {reported: true})
+        .then((thread) => {
+          return res.json("reported");
+        })
+        .catch((err) => {
+          return res.json("reported");
+        });
 
     });
     
@@ -260,15 +259,21 @@ module.exports = function (app) {
 
     })
     .put(function (req, res) {
-      const stocks = [].concat(req.query.stock);
-      let like = req.query.like;
-      const ip = req.ip;
-
-      if (like === undefined || like === 'false')
-        like = false;
-
-      if (stocks.length > 2)
-        return res.json({ error: 'More than 2 stocks not allowed' });
+      const thread_id = req.body.thread_id || "";
+      const reply_id = req.body.reply_id || "";
+      THREAD.findOne({_id: thread_id, replies:{$in:[reply_id]}})
+        .then((thread) => {
+          THREAD.findByIdAndUpdate(reply_id, {reported: true})
+            .then((thread) => {
+              return res.json("reported");
+            })
+            .catch((err) => {
+              return res.json("reported");
+            });
+        })
+        .catch((err) => {
+          return res.json("reported");
+        });
 
     });
 
