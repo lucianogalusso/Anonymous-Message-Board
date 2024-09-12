@@ -16,7 +16,7 @@ const threadSchema = new Schema({
   text: { type: String, required: true },
   created_on: { type: String, required: true },
   bumped_on: { type: String, required: true },
-  board_id: { type: Schema.Types.ObjectId, ref: 'Board', required: true },
+  board_id: { type: Schema.Types.ObjectId, ref: 'Board' },  //null for replies
   reported: Boolean,
   delete_password: String,
   replies: [{ type: Schema.Types.ObjectId, ref: 'Thread' }]
@@ -99,14 +99,14 @@ module.exports = function (app) {
     })
     .get(function (req, res) {
       
-      THREAD.find().sort({created_on:-1}).limit(10).select({reported:0, delete_password:0}).populate('replies')
+      THREAD.find({ board_id: req.board._id}).sort({created_on:-1}).limit(10).select({reported:0, delete_password:0}).populate('replies')
         .then((threads) => {
           if (!threads) 
             return res.json([]);
           threads.forEach(thread => {
             //ver campo reported y delete_password
             thread.replies.sort((a, b) => new Date(b.created_on) - new Date(a.created_on));
-            thread.replies.slice(0, 3);
+            threads.replies = thread.replies.slice(0, 3);
           });
           return res.json(threads);
         })
@@ -169,25 +169,17 @@ module.exports = function (app) {
           if (!originalThread)
             return res.json({error: "invalid id"});
 
-          console.log("originalThread: ", originalThread);
-          createThread(text, board._id, delete_password)
+          createThread(text, null, delete_password)
             .then((savedThread) => {
-
-              console.log("savedThread: ", savedThread);
 
               originalThread.bumped_on = formattedDate;
               originalThread.replies.push(savedThread._id);
 
-              console.log("originalThread: ", originalThread);
-
               originalThread.save()
                 .then((originalThread) => {
 
-                  console.log("originalThread: ", originalThread);
-
                   THREAD.findById(originalThread._id).populate('replies')
                     .then((originalThread) => {
-                      console.log("originalThread: ", originalThread);
                       return res.json(originalThread);
                     })
                     .catch((err) => {
@@ -208,16 +200,11 @@ module.exports = function (app) {
     })
     .get(function (req, res) {
       const thread_id = req.query.thread_id;
-      let finalThreadId = "";
-
-      if (finalThreadId !== undefined)
-        finalThreadId = thread_id;
-      
-      THREAD.findOneById(finalThreadId).select({reported:0, delete_password:0}).populate('replies')
-        .then((thread) => {
-          if (!thread) 
+      THREAD.findById(thread_id).select({reported:0, delete_password:0}).populate('replies')
+        .then((threads) => {
+          if (!threads) 
             return res.json([]);
-          return res.json(thread);
+          return res.json(threads);
         })
         .catch((err) => {
           return res.json(err);
