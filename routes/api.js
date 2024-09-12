@@ -104,11 +104,44 @@ module.exports = function (app) {
           if (!threads) 
             return res.json([]);
           threads.forEach(thread => {
-            //ver campo reported y delete_password
-            thread.replies.sort((a, b) => new Date(b.created_on) - new Date(a.created_on));
+            thread.replies.sort((a, b) => {
+              // ver si [deleted] incluir
+              const excludedText = "[deleted]";
+              const aHasExcludedText = a.text.includes(excludedText);
+              const bHasExcludedText = b.text.includes(excludedText);
+              
+              if (aHasExcludedText && !bHasExcludedText)
+                return 1;
+              if (!aHasExcludedText && bHasExcludedText)
+                return -1;
+              return new Date(b.created_on) - new Date(a.created_on);
+            });
             thread.replies = thread.replies.slice(0, 3);
           });
           return res.json(threads);
+        })
+        .catch((err) => {
+          return res.json(err);
+        });
+
+    })
+    .delete(function (req, res) {
+      const thread_id = req.body.thread_id || "";
+      const delete_password = req.body.delete_password || "";
+
+      THREAD.findById(thread_id)
+        .then((thread) => {
+          if (!thread || thread.delete_password != delete_password) 
+            return res.json("incorrect password");
+          let threadsIdToDelete = [...thread.replies, thread._id];
+          THREAD.deleteMany({_id:{$in:threadsIdToDelete}})
+            .then((a) => {
+              return res.json("success");
+            })
+            .catch((err) => {
+              return res.json("incorrect password");
+            });
+
         })
         .catch((err) => {
           return res.json(err);
@@ -126,20 +159,7 @@ module.exports = function (app) {
       if (stocks.length > 2)
         return res.json({ error: 'More than 2 stocks not allowed' });
 
-    })
-    .delete(function (req, res) {
-      const stocks = [].concat(req.query.stock);
-      let like = req.query.like;
-      const ip = req.ip;
-
-      if (like === undefined || like === 'false')
-        like = false;
-
-      if (stocks.length > 2)
-        return res.json({ error: 'More than 2 stocks not allowed' });
-
     });
-
     
   app.route('/api/replies/:board')
     .all(function (req, res, next) {
@@ -211,19 +231,35 @@ module.exports = function (app) {
         });
 
     })
-    .put(function (req, res) {
-      const stocks = [].concat(req.query.stock);
-      let like = req.query.like;
-      const ip = req.ip;
+    .delete(function (req, res) {
+      const thread_id = req.body.thread_id || "";
+      const reply_id = req.body.reply_id || "";
+      const delete_password = req.body.delete_password || "";
 
-      if (like === undefined || like === 'false')
-        like = false;
+      THREAD.findOne({_id: thread_id, replies:{$in:[reply_id]}})
+        .then((thread) => {
+          if (!thread) 
+            return res.json("incorrect password");
 
-      if (stocks.length > 2)
-        return res.json({ error: 'More than 2 stocks not allowed' });
+          THREAD.findById(reply_id)
+            .then((replyThread) => {
+              if (!replyThread || replyThread.delete_password != delete_password) 
+                return res.json("incorrect password");
+              
+              replyThread.text = "[deleted]";
+              replyThread.save();
+              return res.json("success");
+            })
+            .catch((err) => {
+              return res.json(err);
+            });
+        })
+        .catch((err) => {
+          return res.json(err);
+        });
 
     })
-    .delete(function (req, res) {
+    .put(function (req, res) {
       const stocks = [].concat(req.query.stock);
       let like = req.query.like;
       const ip = req.ip;
