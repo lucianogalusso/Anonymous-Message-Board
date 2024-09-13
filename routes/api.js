@@ -183,7 +183,7 @@ module.exports = function (app) {
       let now = moment();
       let formattedDate = now.format('YYYY-MM-DD HH:mm:ss');
 
-      THREAD.findById(thread_id)
+      THREAD.findById(thread_id).select({reported:0, delete_password:0})
         .then((originalThread) => {
           if (!originalThread)
             return res.json({error: "invalid id"});
@@ -197,7 +197,7 @@ module.exports = function (app) {
               originalThread.save()
                 .then((originalThread) => {
 
-                  THREAD.findById(originalThread._id).populate('replies')
+                  THREAD.findById(originalThread._id).select({reported:0, delete_password:0}).populate({path:'replies',select:{reported:0, delete_password:0}})
                     .then((originalThread) => {
                       return res.json(originalThread);
                     })
@@ -222,7 +222,7 @@ module.exports = function (app) {
       THREAD.findById(thread_id).select({reported:0, delete_password:0}).populate({path:'replies',select:{reported:0, delete_password:0}})
         .then((threads) => {
           if (!threads) 
-            return res.json([]);
+            return res.json({});
           return res.json(threads);
         })
         .catch((err) => {
