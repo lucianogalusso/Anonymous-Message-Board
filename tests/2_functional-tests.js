@@ -112,7 +112,7 @@ suite('Functional Tests', function() {
         .send({ thread_id: thread_id})
         .end(function(err, res){
             assert.equal(res.status, 200);
-            assert.equal(res.body, "reported");
+            assert.equal(res.text, "reported");
             done();
         });
     });
@@ -159,7 +159,7 @@ suite('Functional Tests', function() {
         .send({ thread_id: thread_id, delete_password: "bla", reply_id: reply_id })
         .end(function(err, res){
             assert.equal(res.status, 200);
-            assert.equal(res.body, "incorrect password");
+            assert.equal(res.text, "incorrect password");
             done();
         });
     });
@@ -170,7 +170,7 @@ suite('Functional Tests', function() {
         .send({ thread_id: thread_id, delete_password: delete_passwordReply, reply_id: reply_id })
         .end(function(err, res){
             assert.equal(res.status, 200);
-            assert.equal(res.body, "success");
+            assert.equal(res.text, "success");
             done();
         });
     });
@@ -181,7 +181,7 @@ suite('Functional Tests', function() {
         .send({ thread_id: thread_id, reply_id: reply_id })
         .end(function(err, res){
             assert.equal(res.status, 200);
-            assert.equal(res.body, "reported");
+            assert.equal(res.text, "reported");
             done();
         });
     });
@@ -192,7 +192,7 @@ suite('Functional Tests', function() {
         .send({ thread_id: thread_id, delete_password: "bla" })
         .end(function(err, res){
             assert.equal(res.status, 200);
-            assert.equal(res.body, "incorrect password");
+            assert.equal(res.text, "incorrect password");
             done();
         });
     });
@@ -203,7 +203,7 @@ suite('Functional Tests', function() {
         .send({ thread_id: thread_id, delete_password: delete_password })
         .end(function(err, res){
             assert.equal(res.status, 200);
-            assert.equal(res.body, "success");
+            assert.equal(res.text, "success");
             done();
         });
     });

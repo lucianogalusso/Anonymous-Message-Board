@@ -132,14 +132,14 @@ module.exports = function (app) {
       THREAD.findById(thread_id)
         .then((thread) => {
           if (!thread || thread.delete_password != delete_password) 
-            return res.json("incorrect password");
+            return res.send('incorrect password');
           let threadsIdToDelete = [...thread.replies, thread._id];
           THREAD.deleteMany({_id:{$in:threadsIdToDelete}})
             .then((a) => {
-              return res.json("success");
+              return res.send('success');
             })
             .catch((err) => {
-              return res.json("incorrect password");
+              return res.send('incorrect password');
             });
 
         })
@@ -152,10 +152,10 @@ module.exports = function (app) {
       const thread_id = req.body.thread_id || "";
       THREAD.findByIdAndUpdate(thread_id, {reported: true})
         .then((thread) => {
-          return res.json("reported");
+          return res.send('reported');
         })
         .catch((err) => {
-          return res.json("reported");
+          return res.send('reported');
         });
 
     });
@@ -186,7 +186,7 @@ module.exports = function (app) {
       THREAD.findById(thread_id).select({reported:0, delete_password:0})
         .then((originalThread) => {
           if (!originalThread)
-            return res.json({error: "invalid id"});
+            return res.json({error: 'invalid id'});
 
           createThread(text, null, delete_password)
             .then((savedThread) => {
@@ -238,16 +238,16 @@ module.exports = function (app) {
       THREAD.findOne({_id: thread_id, replies:{$in:[reply_id]}})
         .then((thread) => {
           if (!thread) 
-            return res.json("incorrect password");
+            return res.send('incorrect password');
 
           THREAD.findById(reply_id)
             .then((replyThread) => {
               if (!replyThread || replyThread.delete_password != delete_password) 
-                return res.json("incorrect password");
+                return res.send('incorrect password');
               
               replyThread.text = "[deleted]";
               replyThread.save();
-              return res.json("success");
+              return res.send('success');
             })
             .catch((err) => {
               return res.json(err);
@@ -265,14 +265,14 @@ module.exports = function (app) {
         .then((thread) => {
           THREAD.findByIdAndUpdate(reply_id, {reported: true})
             .then((thread) => {
-              return res.json("reported");
+              return res.send('reported');
             })
             .catch((err) => {
-              return res.json("reported");
+              return res.send('reported');
             });
         })
         .catch((err) => {
-          return res.json("reported");
+          return res.send('reported');
         });
 
     });
